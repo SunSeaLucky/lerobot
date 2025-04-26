@@ -46,6 +46,9 @@ def display_and_save_video_stream(output_dir: Path, fps: int, width: int, height
     cap.set(cv2.CAP_PROP_FPS, fps)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+    # Open MJPG stream for higher frame rate. MJPG is supported by almost all UVC cameras.
+    # Must add after set resolution
+    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
 
     frame_index = 0
     start_time = time.time()

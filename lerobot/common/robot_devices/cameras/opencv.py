@@ -338,6 +338,9 @@ class OpenCVCamera:
             self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.capture_width)
         if self.capture_height is not None:
             self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.capture_height)
+        # Open MJPG stream for higher frame rate. MJPG is supported by almost all UVC cameras.
+        # Must add after set resolution
+        self.camera.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
 
         actual_fps = self.camera.get(cv2.CAP_PROP_FPS)
         actual_width = self.camera.get(cv2.CAP_PROP_FRAME_WIDTH)
