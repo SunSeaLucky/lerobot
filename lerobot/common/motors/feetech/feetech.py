@@ -288,7 +288,28 @@ class FeetechMotorsBus(MotorsBus):
         for motor, pos in positions.items():
             model = self._get_motor_model(motor)
             max_res = self.model_resolution_table[model] - 1
-            half_turn_homings[motor] = pos - int(max_res / 2)
+            
+            # calculate target offset
+            target_offset = pos - int(max_res / 2)
+            print(f"target_offset: {target_offset}")
+            
+            # get Homing_Offset bits from encoding table
+            encoding_table = self.model_encoding_table.get(model, {})
+            homing_offset_bits = encoding_table.get("Homing_Offset", 11)  # 默认11位
+            
+            # calculate adjustment value: 2^(bits + 1)
+            adjustment_value = 1 << (homing_offset_bits + 1)
+            max_offset = (1 << homing_offset_bits) - 1  # 2^bits - 1
+            
+            # ensure offset is in reasonable range
+            # if out of range, adjust by adjustment_value
+            while target_offset > max_offset:
+                target_offset -= adjustment_value
+            while target_offset < -max_offset:
+                target_offset += adjustment_value
+            print(f"target_offset adjusted: {target_offset}")
+            
+            half_turn_homings[motor] = target_offset
 
         return half_turn_homings
 
