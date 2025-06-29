@@ -119,6 +119,18 @@ class SO101Follower(Robot):
         )
         range_mins, range_maxes = self.bus.record_ranges_of_motion()
 
+        if 'gripper' in range_mins:
+            # add negative offset to gripper to enable just-tight follower grip when leader gripper is closed
+            gripper_adjust_offset_deg = 4
+            encoding_table = self.bus.model_encoding_table.get(self.bus.motors['gripper'].model, {})
+            homing_offset_bits = encoding_table.get("Homing_Offset")
+            full_range = 1 << (homing_offset_bits + 1)
+            gripper_adjust_offset = - (int)(full_range * gripper_adjust_offset_deg / 360)
+            original_min = range_mins['gripper']
+            adjusted_min = original_min + gripper_adjust_offset
+            print(f"Gripper range adjusted: original min={original_min} -> adjusted min={adjusted_min} (offset={gripper_adjust_offset})")
+            range_mins['gripper'] = adjusted_min
+
         self.calibration = {}
         for motor, m in self.bus.motors.items():
             self.calibration[motor] = MotorCalibration(
