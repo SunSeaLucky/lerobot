@@ -113,6 +113,7 @@ class OpenCVCamera(Camera):
         self.warmup_s = config.warmup_s
 
         self.videocapture: cv2.VideoCapture | None = None
+        self.fourcc: cv2.VideoWriter_fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
 
         self.thread: Thread | None = None
         self.stop_event: Event | None = None
@@ -155,7 +156,7 @@ class OpenCVCamera(Camera):
         # blocking in multi-threaded applications, especially during data collection.
         cv2.setNumThreads(1)
 
-        self.videocapture = cv2.VideoCapture(self.index_or_path, self.backend)
+        self.videocapture = cv2.VideoCapture(self.index_or_path)
 
         if not self.videocapture.isOpened():
             self.videocapture.release()
@@ -213,6 +214,8 @@ class OpenCVCamera(Camera):
         else:
             self._validate_width_and_height()
 
+        self._validate_fourcc()
+
     def _validate_fps(self) -> None:
         """Validates and sets the camera's frames per second (FPS)."""
 
@@ -239,6 +242,14 @@ class OpenCVCamera(Camera):
             raise RuntimeError(
                 f"{self} failed to set capture_height={self.capture_height} ({actual_height=}, {height_success=})."
             )
+
+    def _validate_fourcc(self) -> None:
+        """Validates and sets the camera's fourcc codec."""
+        
+        fourcc_succ = self.videocapture.set(cv2.CAP_PROP_FOURCC, self.fourcc)
+        actual_fourcc = self.videocapture.get(cv2.CAP_PROP_FOURCC)
+        if not fourcc_succ or actual_fourcc != self.fourcc:
+            raise RuntimeError(f"{self} failed to set fourcc={self.fourcc} ({actual_fourcc=}, {fourcc_succ=}).")
 
     @staticmethod
     def find_cameras() -> List[Dict[str, Any]]:
