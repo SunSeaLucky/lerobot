@@ -197,11 +197,6 @@ class OpenCVCamera(Camera):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"Cannot configure settings for {self} as it is not connected.")
 
-        if self.fps is None:
-            self.fps = self.videocapture.get(cv2.CAP_PROP_FPS)
-        else:
-            self._validate_fps()
-
         default_width = int(round(self.videocapture.get(cv2.CAP_PROP_FRAME_WIDTH)))
         default_height = int(round(self.videocapture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 
@@ -215,6 +210,11 @@ class OpenCVCamera(Camera):
             self._validate_width_and_height()
 
         self._validate_fourcc()
+        
+        if self.fps is None:
+            self.fps = self.videocapture.get(cv2.CAP_PROP_FPS)
+        else:
+            self._validate_fps()
 
     def _validate_fps(self) -> None:
         """Validates and sets the camera's frames per second (FPS)."""
