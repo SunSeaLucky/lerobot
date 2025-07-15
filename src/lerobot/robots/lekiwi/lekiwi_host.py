@@ -21,6 +21,7 @@ import time
 
 import cv2
 import zmq
+import argparse
 
 from .config_lekiwi import LeKiwiConfig, LeKiwiHostConfig
 from .lekiwi import LeKiwi
@@ -47,9 +48,10 @@ class LeKiwiHost:
         self.zmq_context.term()
 
 
-def main():
+def main(robot_id: str):
     logging.info("Configuring LeKiwi")
     robot_config = LeKiwiConfig()
+    robot_config.id = robot_id
     robot = LeKiwi(robot_config)
 
     logging.info("Connecting LeKiwi")
@@ -124,4 +126,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # temporary arg parse: set robot id from the command arg like -robot_id=R12251899
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--robot_id", type=str)
+    args = parser.parse_args()
+
+    main(args.robot_id)
