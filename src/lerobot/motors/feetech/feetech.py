@@ -233,6 +233,7 @@ class FeetechMotorsBus(MotorsBus):
     def is_calibrated(self) -> bool:
         motors_calibration = self.read_calibration()
         if set(motors_calibration) != set(self.calibration):
+            print("Calibration joints mismatch!")
             return False
 
         same_ranges = all(
@@ -241,12 +242,16 @@ class FeetechMotorsBus(MotorsBus):
             for motor, cal in motors_calibration.items()
         )
         if self.protocol_version == 1:
+            if not same_ranges:
+                print("Calibration ranges mismatch!")
             return same_ranges
 
         same_offsets = all(
             self.calibration[motor].homing_offset == cal.homing_offset
             for motor, cal in motors_calibration.items()
         )
+        if not same_offsets:
+            print("Calibration offsets mismatch!")
         return same_ranges and same_offsets
 
     def read_calibration(self) -> dict[str, MotorCalibration]:
