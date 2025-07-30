@@ -157,10 +157,73 @@ class SO101Follower(Robot):
                 self.bus.write("D_Coefficient", motor, 0)
 
     def setup_motors(self) -> None:
+        expected_ids = [1]
+        # Check if there are other motors on the bus
+        succ, msg = self._check_unexpected_motors_on_bus(expected_ids=expected_ids, raise_on_error=True)
+        if not succ:
+            input(msg)
+            succ, msg = self._check_unexpected_motors_on_bus(expected_ids=expected_ids, raise_on_error=True)
+
         for motor in reversed(self.bus.motors):
-            input(f"Connect the controller board to the '{motor}' motor only and press enter.")
+            input(f"Connect the controller board to the '{motor}' motor ONLY and press enter.")
+            succ, msg = self._check_unexpected_motors_on_bus(expected_ids=expected_ids, raise_on_error=False)
+            if not succ:
+                input(msg)
+                succ, msg = self._check_unexpected_motors_on_bus(expected_ids=expected_ids, raise_on_error=False)            
             self.bus.setup_motor(motor)
             print(f"'{motor}' motor id set to {self.bus.motors[motor].id}")
+            expected_ids.append(self.bus.motors[motor].id)
+
+    def _check_unexpected_motors_on_bus(self, expected_ids: list[int], raise_on_error: bool = True) -> None:
+        """
+        Check if there are other motors on the bus, if there are other motors, stop the setup process.        
+        Raises:
+            RuntimeError: If there are other motors on the bus, stop the setup process.
+        """
+        # Ensure the bus is connected
+        if not self.bus.is_connected:
+            self.bus.connect(handshake=False)
+        
+        # Scan all motors at the current baudrate
+        current_baudrate = self.bus.get_baudrate()
+        self.bus.set_baudrate(current_baudrate)
+        
+        # Scan all motors on the bus
+        found_motors = self.bus.broadcast_ping(raise_on_error=False)
+        
+        if found_motors is None:
+            # If the scan fails, try other baudrates
+            for baudrate in self.bus.available_baudrates:
+                if baudrate == current_baudrate:
+                    continue
+                    
+                self.bus.set_baudrate(baudrate)
+                found_motors = self.bus.broadcast_ping(raise_on_error=False)
+                if found_motors is not None:
+                    break
+        
+        # Restore the original baudrate
+        self.bus.set_baudrate(current_baudrate)
+        
+        if found_motors is not None:
+            # Check if there are other motors on the bus
+            unexpected_motors = [motor_id for motor_id in found_motors.keys() if motor_id not in expected_ids]
+            
+            if unexpected_motors:
+                unexpected_motors_str = ", ".join(map(str, sorted(unexpected_motors)))
+                if raise_on_error:
+                    raise RuntimeError(
+                        f"There are unexpected motors on the bus: {unexpected_motors_str}. "
+                        f"Seems this arm has been setup before, not necessary to setup again."
+                    )
+                else:
+                    logger.warning(
+                        f"There are unexpected motors on the bus: {unexpected_motors_str}. "
+                    )
+                    return False, "Please unplug the last motor and press ENTER to try again."
+            return True, "OK"
+        
+        return False, "No motors found on the bus, please connect the arm and press ENTER to try again."
 
     def get_observation(self) -> dict[str, Any]:
         if not self.is_connected:
