@@ -24,3 +24,6 @@ from ..config import TeleoperatorConfig
 class BiSO101LeaderConfig(TeleoperatorConfig):
     left_arm_port: str
     right_arm_port: str 
+
+    left_id: str | None = None
+    right_id: str | None = None

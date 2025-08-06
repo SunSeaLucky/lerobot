@@ -73,9 +73,10 @@ class SO101Leader(Teleoperator):
 
         self.bus.connect()
         if not self.is_calibrated and calibrate:
-            logger.info(
-                "Mismatch between calibration values in the motor and the calibration file or no calibration file found"
-            )
+            if not self.calibration:
+                logger.info("No calibration file found, running calibration")
+            else:
+                logger.info("Mismatch between calibration values in the motor and the calibration file")
             self.calibrate()
 
         self.configure()

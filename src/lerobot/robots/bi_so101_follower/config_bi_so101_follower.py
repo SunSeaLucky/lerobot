@@ -27,6 +27,9 @@ class BiSO101FollowerConfig(RobotConfig):
     left_arm_port: str
     right_arm_port: str
 
+    left_id: str | None = None
+    right_id: str | None = None
+
     # Optional
     left_arm_disable_torque_on_disconnect: bool = True
     left_arm_max_relative_target: int | None = None

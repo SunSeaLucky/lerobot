@@ -39,14 +39,26 @@ class BiSO101Leader(Teleoperator):
         super().__init__(config)
         self.config = config
 
+        left_id = None
+        if config.left_id:
+            left_id = config.left_id
+        elif config.id:
+            left_id = f"{config.id}_left"
+
+        right_id = None
+        if config.right_id:
+            right_id = config.right_id
+        elif config.id:
+            right_id = f"{config.id}_right"
+
         left_arm_config = SO101LeaderConfig(
-            id=f"{config.id}_left" if config.id else None,
+            id=left_id,
             calibration_dir=config.calibration_dir,
             port=config.left_arm_port,
         )
 
         right_arm_config = SO101LeaderConfig(
-            id=f"{config.id}_right" if config.id else None,
+            id=right_id,
             calibration_dir=config.calibration_dir,
             port=config.right_arm_port,
         )
