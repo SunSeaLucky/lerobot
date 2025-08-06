@@ -49,6 +49,26 @@ python -m lerobot.teleoperate \
   --display_data=true
 ```
 
+Example teleoperation with bimanual so101:
+
+```shell
+python -m lerobot.teleoperate \
+  --robot.type=bi_so101_follower \
+  --robot.left_arm_port=/dev/ttyACM0 \
+  --robot.right_arm_port=/dev/ttyACM1 \
+  --robot.id=bimanual_follower \
+  --robot.cameras='{
+    left: {"type": "opencv", "index_or_path": 0, "width": 1280, "height": 720, "fps": 30},
+    top: {"type": "opencv", "index_or_path": 1, "width": 1280, "height": 720, "fps": 30},
+    right: {"type": "opencv", "index_or_path": 2, "width": 1280, "height": 720, "fps": 30}
+  }' \
+  --teleop.type=bi_so101_leader \
+  --teleop.left_arm_port=/dev/ttyACM2 \
+  --teleop.right_arm_port=/dev/ttyACM3 \
+  --teleop.id=bimanual_leader \
+  --display_data=true
+```
+
 """
 
 import logging
@@ -65,6 +85,7 @@ from lerobot.robots import (  # noqa: F401
     Robot,
     RobotConfig,
     bi_so100_follower,
+    bi_so101_follower,
     hope_jr,
     koch_follower,
     make_robot_from_config,
@@ -75,6 +96,7 @@ from lerobot.teleoperators import (  # noqa: F401
     Teleoperator,
     TeleoperatorConfig,
     bi_so100_leader,
+    bi_so101_leader,
     gamepad,
     homunculus,
     koch_leader,
