@@ -73,6 +73,9 @@ class SO101Leader(Teleoperator):
 
         self.bus.connect()
         if not self.is_calibrated and calibrate:
+            logger.info(
+                "Mismatch between calibration values in the motor and the calibration file or no calibration file found"
+            )
             self.calibrate()
 
         self.configure()
@@ -83,6 +86,16 @@ class SO101Leader(Teleoperator):
         return self.bus.is_calibrated
 
     def calibrate(self) -> None:
+        if self.calibration:
+            # Calibration file exists, ask user whether to use it or run new calibration
+            user_input = input(
+                f"Press ENTER to use provided calibration file associated with the id {self.id}, or type 'c' and press ENTER to run calibration: "
+            )
+            if user_input.strip().lower() != "c":
+                logger.info(f"Writing calibration file associated with the id {self.id} to the motors")
+                self.bus.write_calibration(self.calibration)
+                return
+
         logger.info(f"\nRunning calibration of {self}")
         self.bus.disable_torque()
         for motor in self.bus.motors:
@@ -118,10 +131,73 @@ class SO101Leader(Teleoperator):
             self.bus.write("Operating_Mode", motor, OperatingMode.POSITION.value)
 
     def setup_motors(self) -> None:
+        expected_ids = [1]
+        # Check if there are other motors on the bus
+        succ, msg = self._check_unexpected_motors_on_bus(expected_ids=expected_ids, raise_on_error=True)
+        while not succ:
+            input(msg)
+            succ, msg = self._check_unexpected_motors_on_bus(expected_ids=expected_ids, raise_on_error=True)
+
         for motor in reversed(self.bus.motors):
-            input(f"Connect the controller board to the '{motor}' motor only and press enter.")
+            input(f"Connect the controller board to the '{motor}' motor ONLY and press enter.")
+            succ, msg = self._check_unexpected_motors_on_bus(expected_ids=expected_ids, raise_on_error=False)
+            while not succ:
+                input(msg)
+                succ, msg = self._check_unexpected_motors_on_bus(expected_ids=expected_ids, raise_on_error=False)            
             self.bus.setup_motor(motor)
             print(f"'{motor}' motor id set to {self.bus.motors[motor].id}")
+            expected_ids.append(self.bus.motors[motor].id)
+
+    def _check_unexpected_motors_on_bus(self, expected_ids: list[int], raise_on_error: bool = True) -> None:
+        """
+        Check if there are other motors on the bus, if there are other motors, stop the setup process.        
+        Raises:
+            RuntimeError: If there are other motors on the bus, stop the setup process.
+        """
+        # Ensure the bus is connected
+        if not self.bus.is_connected:
+            self.bus.connect(handshake=False)
+        
+        # Scan all motors at the current baudrate
+        current_baudrate = self.bus.get_baudrate()
+        self.bus.set_baudrate(current_baudrate)
+        
+        # Scan all motors on the bus
+        found_motors = self.bus.broadcast_ping(raise_on_error=False)
+        
+        if found_motors is None:
+            # If the scan fails, try other baudrates
+            for baudrate in self.bus.available_baudrates:
+                if baudrate == current_baudrate:
+                    continue
+                    
+                self.bus.set_baudrate(baudrate)
+                found_motors = self.bus.broadcast_ping(raise_on_error=False)
+                if found_motors is not None:
+                    break
+        
+        # Restore the original baudrate
+        self.bus.set_baudrate(current_baudrate)
+        
+        if found_motors is not None:
+            # Check if there are other motors on the bus
+            unexpected_motors = [motor_id for motor_id in found_motors.keys() if motor_id not in expected_ids]
+            
+            if unexpected_motors:
+                unexpected_motors_str = ", ".join(map(str, sorted(unexpected_motors)))
+                if raise_on_error:
+                    raise RuntimeError(
+                        f"There are unexpected motors on the bus: {unexpected_motors_str}. "
+                        f"Seems this arm has been setup before, not necessary to setup again."
+                    )
+                else:
+                    logger.warning(
+                        f"There are unexpected motors on the bus: {unexpected_motors_str}. "
+                    )
+                    return False, "Please unplug the last motor and press ENTER to try again."
+            return True, "OK"
+        
+        return False, "No motors found on the bus, please connect the arm and press ENTER to try again."
 
     def get_action(self) -> dict[str, float]:
         start = time.perf_counter()

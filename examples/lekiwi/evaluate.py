@@ -83,8 +83,8 @@ while recorded_episodes < NUM_EPISODES and not events["stop_recording"]:
     dataset.save_episode()
     recorded_episodes += 1
 
-# Upload to hub and clean up
-dataset.push_to_hub()
+# # Upload to hub and clean up
+# dataset.push_to_hub()
 
 robot.disconnect()
 listener.stop()

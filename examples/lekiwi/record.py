@@ -4,7 +4,7 @@ from lerobot.record import record_loop
 from lerobot.robots.lekiwi.config_lekiwi import LeKiwiClientConfig
 from lerobot.robots.lekiwi.lekiwi_client import LeKiwiClient
 from lerobot.teleoperators.keyboard import KeyboardTeleop, KeyboardTeleopConfig
-from lerobot.teleoperators.so100_leader import SO100Leader, SO100LeaderConfig
+from lerobot.teleoperators.so101_leader import SO101Leader, SO101LeaderConfig
 from lerobot.utils.control_utils import init_keyboard_listener
 from lerobot.utils.utils import log_say
 from lerobot.utils.visualization_utils import _init_rerun
@@ -16,12 +16,15 @@ RESET_TIME_SEC = 10
 TASK_DESCRIPTION = "My task description"
 
 # Create the robot and teleoperator configurations
-robot_config = LeKiwiClientConfig(remote_ip="172.18.134.136", id="lekiwi")
-leader_arm_config = SO100LeaderConfig(port="/dev/tty.usbmodem585A0077581", id="my_awesome_leader_arm")
+robot_config = LeKiwiClientConfig(remote_ip="192.168.31.165", id="my_lekiwi")
+# port in Linux: /dev/ttyACM0, /dev/ttyACM1, etc.
+# port in MacOS: /dev/tty.usbmodemXXXXXXXXXXXX
+# port in Windows: COMX / COMXX
+leader_arm_config = SO101LeaderConfig(port="COM69", id="R07252710")
 keyboard_config = KeyboardTeleopConfig()
 
 robot = LeKiwiClient(robot_config)
-leader_arm = SO100Leader(leader_arm_config)
+leader_arm = SO101Leader(leader_arm_config)
 keyboard = KeyboardTeleop(keyboard_config)
 
 # Configure the dataset features
@@ -39,7 +42,8 @@ dataset = LeRobotDataset.create(
     image_writer_threads=4,
 )
 
-# To connect you already should have this script running on LeKiwi: `python -m lerobot.robots.lekiwi.lekiwi_host --robot.id=my_awesome_kiwi`
+# To connect you already should have this script running on LeKiwi: `python -m lerobot.robots.lekiwi.lekiwi_host --robot_id=R1225XXXX`
+# where R1225XXXX is the robot serial number
 robot.connect()
 leader_arm.connect()
 keyboard.connect()
@@ -92,8 +96,9 @@ while recorded_episodes < NUM_EPISODES and not events["stop_recording"]:
     dataset.save_episode()
     recorded_episodes += 1
 
-# Upload to hub and clean up
-dataset.push_to_hub()
+# Disable push by default
+# # Upload to hub and clean up
+# dataset.push_to_hub()
 
 robot.disconnect()
 leader_arm.disconnect()

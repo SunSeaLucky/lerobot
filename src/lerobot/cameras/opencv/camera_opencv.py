@@ -18,12 +18,16 @@ Provides the OpenCVCamera class for capturing frames from cameras using OpenCV.
 
 import logging
 import math
+import os
 import platform
 import time
 from pathlib import Path
 from threading import Event, Lock, Thread
-from typing import Any, Dict, List
+from typing import Any
 
+# Fix MSMF hardware transform compatibility for Windows before importing cv2
+if platform.system() == "Windows" and "OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS" not in os.environ:
+    os.environ["OPENCV_VIDEOIO_MSMF_ENABLE_HW_TRANSFORMS"] = "0"
 import cv2
 import numpy as np
 
@@ -197,11 +201,6 @@ class OpenCVCamera(Camera):
         if not self.is_connected:
             raise DeviceNotConnectedError(f"Cannot configure settings for {self} as it is not connected.")
 
-        if self.fps is None:
-            self.fps = self.videocapture.get(cv2.CAP_PROP_FPS)
-        else:
-            self._validate_fps()
-
         default_width = int(round(self.videocapture.get(cv2.CAP_PROP_FRAME_WIDTH)))
         default_height = int(round(self.videocapture.get(cv2.CAP_PROP_FRAME_HEIGHT)))
 
@@ -215,6 +214,11 @@ class OpenCVCamera(Camera):
             self._validate_width_and_height()
 
         self._validate_fourcc()
+        
+        if self.fps is None:
+            self.fps = self.videocapture.get(cv2.CAP_PROP_FPS)
+        else:
+            self._validate_fps()
 
     def _validate_fps(self) -> None:
         """Validates and sets the camera's frames per second (FPS)."""
@@ -252,7 +256,7 @@ class OpenCVCamera(Camera):
             raise RuntimeError(f"{self} failed to set fourcc={self.fourcc} ({actual_fourcc=}, {fourcc_succ=}).")
 
     @staticmethod
-    def find_cameras() -> List[Dict[str, Any]]:
+    def find_cameras() -> list[dict[str, Any]]:
         """
         Detects available OpenCV cameras connected to the system.
 

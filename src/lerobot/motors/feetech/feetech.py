@@ -219,20 +219,21 @@ class FeetechMotorsBus(MotorsBus):
 
         raise RuntimeError(f"Motor '{motor}' (model '{model}') was not found. Make sure it is connected.")
 
-    def configure_motors(self) -> None:
+    def configure_motors(self, return_delay_time=0, maximum_acceleration=254, acceleration=254) -> None:
         for motor in self.motors:
             # By default, Feetech motors have a 500µs delay response time (corresponding to a value of 250 on
             # the 'Return_Delay_Time' address). We ensure this is reduced to the minimum of 2µs (value of 0).
-            self.write("Return_Delay_Time", motor, 0)
+            self.write("Return_Delay_Time", motor, return_delay_time)
             # Set 'Maximum_Acceleration' to 254 to speedup acceleration and deceleration of the motors.
-            # Note: this address is not in the official STS3215 Memory Table
-            self.write("Maximum_Acceleration", motor, 254)
-            self.write("Acceleration", motor, 254)
+            if self.protocol_version == 0:
+                self.write("Maximum_Acceleration", motor, maximum_acceleration)
+            self.write("Acceleration", motor, acceleration)
 
     @property
     def is_calibrated(self) -> bool:
         motors_calibration = self.read_calibration()
         if set(motors_calibration) != set(self.calibration):
+            print("Calibration joints mismatch!")
             return False
 
         same_ranges = all(
@@ -241,12 +242,16 @@ class FeetechMotorsBus(MotorsBus):
             for motor, cal in motors_calibration.items()
         )
         if self.protocol_version == 1:
+            if not same_ranges:
+                print("Calibration ranges mismatch!")
             return same_ranges
 
         same_offsets = all(
             self.calibration[motor].homing_offset == cal.homing_offset
             for motor, cal in motors_calibration.items()
         )
+        if not same_offsets:
+            print("Calibration offsets mismatch!")
         return same_ranges and same_offsets
 
     def read_calibration(self) -> dict[str, MotorCalibration]:
@@ -270,14 +275,15 @@ class FeetechMotorsBus(MotorsBus):
 
         return calibration
 
-    def write_calibration(self, calibration_dict: dict[str, MotorCalibration]) -> None:
+    def write_calibration(self, calibration_dict: dict[str, MotorCalibration], cache: bool = True) -> None:
         for motor, calibration in calibration_dict.items():
             if self.protocol_version == 0:
                 self.write("Homing_Offset", motor, calibration.homing_offset)
             self.write("Min_Position_Limit", motor, calibration.range_min)
             self.write("Max_Position_Limit", motor, calibration.range_max)
 
-        self.calibration = calibration_dict
+        if cache:
+            self.calibration = calibration_dict
 
     def _get_half_turn_homings(self, positions: dict[NameOrID, Value]) -> dict[NameOrID, Value]:
         """
