@@ -249,11 +249,16 @@ class OpenCVCamera(Camera):
 
     def _validate_fourcc(self) -> None:
         """Validates and sets the camera's fourcc codec."""
-        
         fourcc_succ = self.videocapture.set(cv2.CAP_PROP_FOURCC, self.fourcc)
         actual_fourcc = self.videocapture.get(cv2.CAP_PROP_FOURCC)
         if not fourcc_succ or actual_fourcc != self.fourcc:
-            raise RuntimeError(f"{self} failed to set fourcc={self.fourcc} ({actual_fourcc=}, {fourcc_succ=}).")
+            if platform.system() == "Darwin":
+                logger.warning(
+                    f"{self} failed to set fourcc={self.fourcc} ({actual_fourcc=}, {fourcc_succ=}). "
+                    "This is a known issue on macOS and is being ignored."
+                )
+            else:
+                raise RuntimeError(f"{self} failed to set fourcc={self.fourcc} ({actual_fourcc=}, {fourcc_succ=}).")
 
     @staticmethod
     def find_cameras() -> list[dict[str, Any]]:
